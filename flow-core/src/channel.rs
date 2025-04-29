@@ -23,7 +23,16 @@ impl<T: Clone + Debug> Channel<T> {
         self.broadcast_sender.send(message).unwrap();
     }
 
-    pub async fn receive(&mut self) -> Result<Message<T>, Box<dyn Error>> {
-        self.broadcast_receiver.recv().await.map_err(|e| e.into())
+    pub async fn receive(&mut self) -> Result<Message<T>, Box<dyn Error + Send + Sync>> {
+        self.broadcast_receiver.recv().await.map_err(|e| Box::new(e) as Box<dyn Error + Send + Sync>)
+    }
+
+    /// Creates a new receiver subscribed to this channel's broadcast sender.
+    pub fn subscribe(&self) -> Receiver<Message<T>> {
+        self.broadcast_sender.subscribe()
+    }
+
+    pub fn broadcast_receiver(&self) -> &Receiver<Message<T>> {
+        &self.broadcast_receiver
     }
 }

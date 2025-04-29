@@ -1,9 +1,10 @@
-
 use flow_core::config::FlowConfig;
 use flow_core::flow::Flow;
 use flow_core::message::Message;
 use flow_core::message_source::MessageSource;
 use flow_core::trigger::IntervalTrigger;
+use flow_core::channel_source::ChannelSource;
+use tokio::time::sleep;
 use std::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,10 +40,25 @@ async fn main() {
     ));
     let mut flow1_channel = flow1.start(cancellation_token.clone()).await;
 
+    let flow2: Flow<String> = Flow::new(FlowConfig::new(
+        "Flow 2".to_string(),
+        100,
+        Arc::new(IntervalTrigger::new(Duration::from_secs(1))),
+        Arc::new(ChannelSource::new(flow1_channel.subscribe())),
+    ));
+    let mut flow2_channel = flow2.start(cancellation_token.clone()).await;
+
 
     tokio::spawn(async move {
         while let Ok(message) = flow1_channel.receive().await {
-            println!("Received message: {}", message.payload());
+            println!("Received message from flow 1: {}", message.payload());
+        }
+    });
+
+    tokio::spawn(async move {
+        while let Ok(message) = flow2_channel.receive().await {
+            println!("Received message from flow 2: {}", message.payload());
+            sleep(Duration::from_secs(2)).await;
         }
     });
 

@@ -23,13 +23,3 @@ impl Trigger for IntervalTrigger {
         sleep(self.duration).await;
     }
 }
-
-// pub struct ChannelTrigger {
-//     channel: Channel<Message>
-// }
-
-// impl ChannelTrigger {
-//     pub fn new(channel: Channel<Message>) -> Self {
-//         Self { channel }
-//     }
-// }
