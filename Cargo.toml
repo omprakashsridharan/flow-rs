@@ -10,3 +10,4 @@ members = [ "core","examples/basic"]
 
 [workspace.dependencies]
 tokio = { version = "1.44.2", features = ["full"] }
+tokio-util = { version="0.7.15", features=["rt"]}
