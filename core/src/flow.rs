@@ -1,28 +1,26 @@
 use crate::channel::Channel;
 use crate::config::FlowConfig;
-use crate::message_source::MessageSource;
+
 use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::sync::broadcast::channel;
 use tokio_util::sync::CancellationToken;
-use crate::trigger::Trigger;
 
-pub struct Flow<T: Clone + Send + 'static> {
-    source: Arc<dyn MessageSource<T> + Send + Sync>,
-    config: FlowConfig,
+pub struct Flow<T: Clone + Send + 'static + Sync> {
+    config: FlowConfig<T>,
 }
 
-impl<T: Clone + Send + 'static + Debug> Flow<T> {
-    pub fn new(source: Arc<dyn MessageSource<T> + Send + Sync>, config: FlowConfig) -> Self {
-        Self { source, config }
+impl<T: Clone + Send + 'static + Sync + Debug> Flow<T> {
+    pub fn new(config: FlowConfig<T>) -> Self {
+        Self { config }
     }
 
-    pub async fn start(&self, trigger: Arc<dyn Trigger>, cancellation_token: CancellationToken) -> Channel<T> {
+    pub async fn start(&self, cancellation_token: CancellationToken) -> Channel<T> {
         let flow_name = self.config.get_name();
         let (broadcast_sender, broadcast_receiver) = channel(self.config.get_messages_capacity());
-        let source_clone = Arc::clone(&self.source);
+        let source_clone = Arc::clone(&self.config.get_source());
         let broadcast_sender_clone = broadcast_sender.clone();
-
+        let trigger = Arc::clone(&self.config.get_trigger());
         tokio::spawn(async move {
             loop {
                 let bc = broadcast_sender_clone.clone();
