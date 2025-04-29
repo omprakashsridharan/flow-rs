@@ -18,6 +18,7 @@ impl<T: Clone + Send + 'static + Debug> Flow<T> {
     }
 
     pub async fn start(&self, cancellation_token: CancellationToken) -> Channel<T> {
+        let flow_name = self.config.get_name();
         let (broadcast_sender, broadcast_receiver) = channel(self.config.get_messages_capacity());
         let source_clone = Arc::clone(&self.source);
         let broadcast_sender_clone = broadcast_sender.clone();
@@ -28,7 +29,7 @@ impl<T: Clone + Send + 'static + Debug> Flow<T> {
                 let bc = broadcast_sender_clone.clone();
                 tokio::select! {
                     _ = cancellation_token.cancelled() => {
-                        println!("cancelled flow");
+                        println!("{}", format!("cancelled flow: {flow_name}"));
                         break;
                     }
                     _ = sleep(duration) => {

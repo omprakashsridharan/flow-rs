@@ -3,11 +3,13 @@ use std::time::Duration;
 pub struct FlowConfig {
   messages_capacity: usize,
   interval: Option<Duration>,
+  name: String
 }
 
 impl FlowConfig {
-  pub fn new(messages_capacity: usize, interval: Option<Duration>) -> Self {
+  pub fn new(name: String,messages_capacity: usize, interval: Option<Duration>) -> Self {
     Self {
+      name,
       messages_capacity,
       interval,
     }
@@ -23,5 +25,9 @@ impl FlowConfig {
     } else {
       Duration::from_secs(1)
     }
+  }
+  
+  pub fn get_name(&self) -> String {
+    self.name.clone()
   }
 }

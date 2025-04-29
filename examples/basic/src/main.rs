@@ -25,7 +25,8 @@ async fn main() {
     let my_source = MyMessageSource {
         name: String::from("Omprakash"),
     };
-    let flow: Flow<String> = Flow::new(Arc::new(my_source), FlowConfig::new(10, None));
+    let flow: Flow<String> = Flow::new(Arc::new(my_source),
+                                       FlowConfig::new("hello-world".to_string(),10, None));
     let cancellation_token = CancellationToken::new();
 
     let mut channel = flow.start(cancellation_token.clone()).await;
