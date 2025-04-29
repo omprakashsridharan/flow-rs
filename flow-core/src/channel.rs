@@ -1,5 +1,5 @@
-use std::{error::Error, fmt::Debug};
 use crate::message::Message;
+use std::{error::Error, fmt::Debug};
 use tokio::sync::broadcast::{Receiver, Sender};
 
 #[derive(Debug)]
@@ -9,7 +9,10 @@ pub struct Channel<T: Clone + Debug> {
 }
 
 impl<T: Clone + Debug> Channel<T> {
-    pub fn new(broadcast_sender: Sender<Message<T>>, broadcast_receiver: Receiver<Message<T>>) -> Self {
+    pub fn new(
+        broadcast_sender: Sender<Message<T>>,
+        broadcast_receiver: Receiver<Message<T>>,
+    ) -> Self {
         Channel {
             broadcast_receiver: broadcast_receiver,
             broadcast_sender: broadcast_sender,

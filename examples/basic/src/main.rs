@@ -1,8 +1,9 @@
-use core::config::FlowConfig;
-use core::flow::Flow;
-use core::message::Message;
-use core::message_source::MessageSource;
-use core::trigger::IntervalTrigger;
+
+use flow_core::config::FlowConfig;
+use flow_core::flow::Flow;
+use flow_core::message::Message;
+use flow_core::message_source::MessageSource;
+use flow_core::trigger::IntervalTrigger;
 use std::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,8 +15,9 @@ struct MyMessageSource {
     pub name: String,
 }
 
+#[async_trait::async_trait]
 impl MessageSource<String> for MyMessageSource {
-    fn receive(&self) -> Result<Message<String>, Box<dyn Error>> {
+    async fn receive(&self) -> Result<Message<String>, Box<dyn Error>> {
         let name = self.name.clone();
         Ok(Message::new(format!("Hello {name}")))
     }

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast::channel;
 use tokio_util::sync::CancellationToken;
 
-pub struct Flow<T: Clone + Send + 'static + Sync> {
+pub struct Flow<T: Clone + Send + 'static + Sync + Debug> {
     config: FlowConfig<T>,
 }
 
@@ -30,7 +30,7 @@ impl<T: Clone + Send + 'static + Sync + Debug> Flow<T> {
                         break;
                     }
                     _ = trigger.execute() => {
-                        let message = source_clone.receive().expect("TODO: panic message");
+                        let message = source_clone.receive().await.expect("TODO: panic message");
                         bc.send(message).unwrap();
                     }
                 }

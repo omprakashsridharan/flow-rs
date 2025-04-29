@@ -6,8 +6,9 @@ edition = "2024"
 [dependencies]
 
 [workspace]
-members = [ "core","examples/basic"]
+members = [ "flow-core","examples/basic"]
 
 [workspace.dependencies]
 tokio = { version = "1.44.2", features = ["full"] }
 tokio-util = { version="0.7.15", features=["rt"]}
+async-trait = "0.1"
