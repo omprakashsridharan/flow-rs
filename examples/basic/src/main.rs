@@ -25,21 +25,21 @@ impl MessageSource<String> for MyMessageSource {
 async fn main() {
     println!("Basic examples");
 
+    let cancellation_token = CancellationToken::new();
 
-    let flow: Flow<String> = Flow::new(FlowConfig::new(
-        "hello-world".to_string(),
+    let flow1: Flow<String> = Flow::new(FlowConfig::new(
+        "Flow 1".to_string(),
         100,
         Arc::new(IntervalTrigger::new(Duration::from_secs(1))),
         Arc::new(MyMessageSource {
             name: String::from("Omprakash"),
         })
     ));
+    let mut flow1_channel = flow1.start(cancellation_token.clone()).await;
 
-    let cancellation_token = CancellationToken::new();
 
-    let mut channel = flow.start(cancellation_token.clone()).await;
     tokio::spawn(async move {
-        while let Ok(message) = channel.receive().await {
+        while let Ok(message) = flow1_channel.receive().await {
             println!("Received message: {}", message.payload());
         }
     });
