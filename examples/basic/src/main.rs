@@ -2,8 +2,10 @@ use core::config::FlowConfig;
 use core::flow::Flow;
 use core::message::Message;
 use core::message_source::MessageSource;
+use core::trigger::IntervalTrigger;
 use std::error::Error;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::signal;
 use tokio_util::sync::CancellationToken;
 
@@ -25,11 +27,15 @@ async fn main() {
     let my_source = MyMessageSource {
         name: String::from("Omprakash"),
     };
-    let flow: Flow<String> = Flow::new(Arc::new(my_source),
-                                       FlowConfig::new("hello-world".to_string(),10, None));
+    let flow: Flow<String> = Flow::new(
+        Arc::new(my_source),
+        FlowConfig::new("hello-world".to_string(), 10),
+    );
     let cancellation_token = CancellationToken::new();
 
-    let mut channel = flow.start(cancellation_token.clone()).await;
+    let trigger = Arc::new(IntervalTrigger::new(Duration::from_secs(1)));
+
+    let mut channel = flow.start(trigger, cancellation_token.clone()).await;
     tokio::spawn(async move {
         while let Ok(message) = channel.receive().await {
             println!("Received message: {}", message.payload());

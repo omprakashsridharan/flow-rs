@@ -4,8 +4,8 @@ use crate::message_source::MessageSource;
 use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::sync::broadcast::channel;
-use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
+use crate::trigger::Trigger;
 
 pub struct Flow<T: Clone + Send + 'static> {
     source: Arc<dyn MessageSource<T> + Send + Sync>,
@@ -17,12 +17,11 @@ impl<T: Clone + Send + 'static + Debug> Flow<T> {
         Self { source, config }
     }
 
-    pub async fn start(&self, cancellation_token: CancellationToken) -> Channel<T> {
+    pub async fn start(&self, trigger: Arc<dyn Trigger>, cancellation_token: CancellationToken) -> Channel<T> {
         let flow_name = self.config.get_name();
         let (broadcast_sender, broadcast_receiver) = channel(self.config.get_messages_capacity());
         let source_clone = Arc::clone(&self.source);
         let broadcast_sender_clone = broadcast_sender.clone();
-        let duration = self.config.get_interval();
 
         tokio::spawn(async move {
             loop {
@@ -32,7 +31,7 @@ impl<T: Clone + Send + 'static + Debug> Flow<T> {
                         println!("{}", format!("cancelled flow: {flow_name}"));
                         break;
                     }
-                    _ = sleep(duration) => {
+                    _ = trigger.execute() => {
                         let message = source_clone.receive().expect("TODO: panic message");
                         bc.send(message).unwrap();
                     }
