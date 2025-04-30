@@ -32,7 +32,9 @@ impl<T: Clone + Debug + Send + 'static> ChannelSource<T> {
 }
 
 #[async_trait]
-impl<T: Clone + Debug + Send + 'static> MessageSource<T> for ChannelSource<T> {
+impl<T: Clone + Debug + Send + Sync + 'static> MessageSource for ChannelSource<T> {
+
+    type Payload = T;
     /// Receives a message from the underlying broadcast channel.
     ///
     /// This method acquires a lock on the internal `Mutex` to ensure exclusive

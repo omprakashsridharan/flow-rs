@@ -7,3 +7,4 @@ edition = "2024"
 tokio = {workspace = true}
 tokio-util = {workspace = true}
 async-trait = {workspace = true}
+derive_builder = {workspace=true}

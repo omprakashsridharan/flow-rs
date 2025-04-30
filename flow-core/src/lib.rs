@@ -5,3 +5,4 @@ pub mod channel;
 pub mod channel_source;
 pub mod config;
 pub mod trigger;
+pub mod filter;

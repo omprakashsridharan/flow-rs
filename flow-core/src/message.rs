@@ -12,7 +12,7 @@ impl<T: Clone + Debug> Message<T> {
         Self { payload }
     }
 
-    pub fn payload(&self) -> &T {
+    pub fn get_payload(&self) -> &T {
         &self.payload
     }
 }
