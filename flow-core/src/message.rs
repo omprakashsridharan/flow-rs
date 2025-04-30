@@ -1,13 +1,9 @@
-use std::fmt::Debug;
-
-
-
-#[derive(Clone, Debug)]
-pub struct Message<T: Clone + Debug> {
+#[derive(Clone)]
+pub struct Message<T: Clone> {
     payload: T,
 }
 
-impl<T: Clone + Debug> Message<T> {
+impl<T: Clone> Message<T> {
     pub fn new(payload: T) -> Self {
         Self { payload }
     }

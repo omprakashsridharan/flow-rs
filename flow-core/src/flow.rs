@@ -1,18 +1,17 @@
 use crate::channel::Channel;
 use crate::config::FlowConfig;
 
-use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::sync::broadcast::channel;
 use tokio_util::sync::CancellationToken;
 
 use crate::message::Message;
 
-pub struct Flow<T: Clone + Send + 'static + Sync + Debug> {
+pub struct Flow<T: Clone + Send + 'static + Sync> {
     config: FlowConfig<T>,
 }
 
-impl<T: Clone + Send + 'static + Sync + Debug> Flow<T> {
+impl<T: Clone + Send + 'static + Sync> Flow<T> {
     pub fn new(config: FlowConfig<T>) -> Self {
         Self { config }
     }
@@ -42,7 +41,9 @@ impl<T: Clone + Send + 'static + Sync + Debug> Flow<T> {
                         };
 
                         if should_send {
-                            bc.send(message.clone()).unwrap();
+                            if let Err(e) = bc.send(message.clone()) {
+                                panic!("Failed to send message: {}", e);
+                            }
                         }
                     }
                 }

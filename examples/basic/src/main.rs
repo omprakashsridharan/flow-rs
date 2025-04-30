@@ -12,7 +12,6 @@ use tokio::signal;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 
-#[derive(Debug)]
 struct MyMessageSource {
     pub name: String,
 }

@@ -1,7 +1,7 @@
 use crate::message::Message;
 use crate::message_source::MessageSource;
 use async_trait::async_trait;
-use std::{error::Error, fmt::Debug, sync::Arc};
+use std::{error::Error, sync::Arc};
 use tokio::sync::{broadcast::Receiver, Mutex};
 
 /// Wraps a `tokio::sync::broadcast::Receiver` to make it usable as a `MessageSource`.
@@ -11,15 +11,14 @@ use tokio::sync::{broadcast::Receiver, Mutex};
 /// `Receiver::recv` and the `&self` requirement of `MessageSource::receive`.
 /// It uses an internal `Mutex` to manage access to the receiver, ensuring
 /// thread safety (`Send + Sync`).
-#[derive(Debug)]
-pub struct ChannelSource<T: Clone + Debug + Send + 'static> {
+pub struct ChannelSource<T: Clone + Send + 'static> {
     // Arc<Mutex<>> is used to allow shared access (&self) while enabling
     // mutable access internally (&mut receiver) required by recv(),
     // and to satisfy Send + Sync bounds required by MessageSource.
     receiver: Arc<Mutex<Receiver<Message<T>>>>,
 }
 
-impl<T: Clone + Debug + Send + 'static> ChannelSource<T> {
+impl<T: Clone + Send + 'static> ChannelSource<T> {
     /// Creates a new `ChannelSource` taking ownership of a `Receiver`.
     ///
     /// The receiver is typically obtained from an existing `Channel`,
@@ -32,7 +31,7 @@ impl<T: Clone + Debug + Send + 'static> ChannelSource<T> {
 }
 
 #[async_trait]
-impl<T: Clone + Debug + Send + Sync + 'static> MessageSource for ChannelSource<T> {
+impl<T: Clone + Send + Sync + 'static> MessageSource for ChannelSource<T> {
 
     type Payload = T;
     /// Receives a message from the underlying broadcast channel.

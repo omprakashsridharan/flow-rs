@@ -1,11 +1,10 @@
-use std::fmt::Debug;
 use std::sync::Arc;
 use derive_builder::Builder;
 
 use crate::{filter::Filter, message_source::MessageSource, trigger::Trigger};
 
 #[derive(Builder)]
-pub struct FlowConfig<T: Clone + Send + 'static + Sync + Debug> {
+pub struct FlowConfig<T: Clone + Send + 'static + Sync> {
     messages_capacity: usize,
     name: String,
     trigger: Arc<dyn Trigger>,
@@ -13,7 +12,7 @@ pub struct FlowConfig<T: Clone + Send + 'static + Sync + Debug> {
     filter: Option<Arc<dyn Filter<T>>>,
 }
 
-impl<T: Clone + Send + 'static + Sync + Debug> FlowConfig<T> {
+impl<T: Clone + Send + 'static + Sync> FlowConfig<T> {
 
     pub fn get_messages_capacity(&self) -> usize {
         self.messages_capacity
