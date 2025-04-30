@@ -1,14 +1,13 @@
 use std::sync::Arc;
 use derive_builder::Builder;
 
-use crate::{filter::Filter, message_source::MessageSource, trigger::Trigger};
+use crate::{broadcast_source::BroadcastSource, filter::Filter};
 
 #[derive(Builder)]
 pub struct FlowConfig<T: Clone + Send + 'static + Sync> {
     messages_capacity: usize,
     name: String,
-    trigger: Arc<dyn Trigger>,
-    source: Arc<dyn MessageSource<Payload = T>>,
+    source: Arc<dyn BroadcastSource<Payload = T>>,
     filter: Option<Arc<dyn Filter<T>>>,
 }
 
@@ -22,11 +21,7 @@ impl<T: Clone + Send + 'static + Sync> FlowConfig<T> {
         self.name.clone()
     }
 
-    pub fn get_trigger(&self) -> Arc<dyn Trigger> {
-        self.trigger.clone()
-    }
-
-    pub fn get_source(&self) -> Arc<dyn MessageSource<Payload = T>> {
+    pub fn get_source(&self) -> Arc<dyn BroadcastSource<Payload = T>> {
         self.source.clone()
     }
 

@@ -1,9 +1,10 @@
-use flow_core::channel_source::ChannelSource;
+use flow_core::broadcast_source::{BroadcastSource, PollingSourceWrapper};
 use flow_core::config::FlowConfigBuilder;
 use flow_core::filter::Filter;
 use flow_core::flow::Flow;
 use flow_core::message::Message;
 use flow_core::message_source::MessageSource;
+use flow_core::pipeline::Pipeline;
 use flow_core::trigger::IntervalTrigger;
 use std::error::Error;
 use std::sync::Arc;
@@ -22,7 +23,8 @@ impl MessageSource for MyMessageSource {
 
     async fn receive(&self) -> Result<Message<String>, Box<dyn Error>> {
         let name = self.name.clone();
-        Ok(Message::new(format!("Hello {name}")))
+        let msg = format!("Hello {} at {:?}", name, std::time::Instant::now());
+        Ok(Message::new(msg))
     }
 }
 
@@ -36,55 +38,70 @@ impl Filter<String> for HelloFilter {
 
 #[tokio::main]
 async fn main() {
-    println!("Basic examples");
+    println!("Basic example with Pipeline");
 
-    let cancellation_token = CancellationToken::new();
+    let app_cancel_token = CancellationToken::new();
+
+    let my_source = Arc::new(MyMessageSource {
+        name: String::from("Omprakash (Shared Source)"),
+    });
+
+    let source_trigger = Arc::new(IntervalTrigger::new(Duration::from_secs(1)));
+
+    let broadcast_source = Arc::new(PollingSourceWrapper::new(my_source, source_trigger, 100));
 
     let flow1_config = FlowConfigBuilder::default()
         .name("Flow 1".to_string())
         .messages_capacity(100)
-        .trigger(Arc::new(IntervalTrigger::new(Duration::from_secs(1))))
-        .source(Arc::new(MyMessageSource {
-            name: String::from("flow 1 Omprakash"),
-        }))
+        .source(broadcast_source.clone() as Arc<dyn BroadcastSource<Payload = String>>)
         .filter(Some(Arc::new(HelloFilter {})))
         .build()
         .unwrap();
 
     let flow1: Flow<String> = Flow::new(flow1_config);
-    let mut flow1_channel = flow1.start(cancellation_token.clone()).await;
 
     let flow2_config = FlowConfigBuilder::default()
         .name("Flow 2".to_string())
         .messages_capacity(100)
-        .trigger(Arc::new(IntervalTrigger::new(Duration::from_secs(1))))
-        .source(Arc::new(ChannelSource::new(flow1_channel.subscribe())))
+        .source(broadcast_source.clone() as Arc<dyn BroadcastSource<Payload = String>>)
         .filter(None)
         .build()
         .unwrap();
 
     let flow2: Flow<String> = Flow::new(flow2_config);
-    let mut flow2_channel = flow2.start(cancellation_token.clone()).await;
+
+    let pipeline = Pipeline::new(broadcast_source, vec![flow1, flow2]);
+
+    let mut output_channels = pipeline.start(app_cancel_token.clone()).await;
+    let mut flow1_channel = output_channels.remove("Flow 1").expect("Flow 1 channel not found");
+    let mut flow2_channel = output_channels.remove("Flow 2").expect("Flow 2 channel not found");
+
     tokio::spawn(async move {
         while let Ok(message) = flow1_channel.receive().await {
-            println!("Received message from flow 1: {}", message.get_payload());
+            println!("Flow 1 RCV: {}", message.get_payload());
         }
+        println!("Flow 1 finished receiving.");
     });
 
     tokio::spawn(async move {
         while let Ok(message) = flow2_channel.receive().await {
-            println!("Received message from flow 2: {}", message.get_payload());
-            sleep(Duration::from_secs(2)).await;
+            println!("Flow 2 RCV: {}", message.get_payload());
+            sleep(Duration::from_millis(50)).await;
         }
+        println!("Flow 2 finished receiving.");
     });
 
     match signal::ctrl_c().await {
         Ok(()) => {
-            cancellation_token.cancel();
+            println!("Ctrl+C received. Cancelling pipeline...");
+            app_cancel_token.cancel();
         }
         Err(err) => {
             eprintln!("Unable to listen for shutdown signal: {}", err);
-            // we also shut down in case of error
+            app_cancel_token.cancel();
         }
     }
+
+    sleep(Duration::from_secs(1)).await;
+    println!("Shutdown complete.");
 }
