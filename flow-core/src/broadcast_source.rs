@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::broadcast::{self, Receiver, Sender};
 use tokio_util::sync::CancellationToken;
+use log::{debug, error};
 
 /// Represents a source that can broadcast messages to multiple subscribers.
 #[async_trait]
@@ -75,7 +76,7 @@ where
             loop {
                 tokio::select! {
                     _ = cancellation_token.cancelled() => {
-                        println!("PollingSourceWrapper: Cancellation received. Stopping poll loop.");
+                        debug!("PollingSourceWrapper: Cancellation received. Stopping poll loop.");
                         break;
                     }
                     _ = trigger.execute() => {
@@ -89,7 +90,7 @@ where
                                 }
                             }
                             Err(e) => {
-                                eprintln!("PollingSourceWrapper: Error receiving message from source: {}", e);
+                                error!("PollingSourceWrapper: Error receiving message from source: {}", e);
                                 // Decide on error handling: continue, break, delay?
                                 // For now, let's just log and continue.
                             }
@@ -97,7 +98,7 @@ where
                     }
                 }
             }
-            println!("PollingSourceWrapper: Poll loop finished.");
+            debug!("PollingSourceWrapper: Poll loop finished.");
         });
     }
 }

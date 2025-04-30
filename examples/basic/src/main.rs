@@ -6,12 +6,14 @@ use flow_core::message::Message;
 use flow_core::message_source::MessageSource;
 use flow_core::pipeline::Pipeline;
 use flow_core::trigger::IntervalTrigger;
+use log::{error, info};
 use std::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::signal;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
+use env_logger::Env;
 
 struct MyMessageSource {
     pub name: String,
@@ -38,7 +40,9 @@ impl Filter<String> for HelloFilter {
 
 #[tokio::main]
 async fn main() {
-    println!("Basic example with Pipeline");
+    // Configure env_logger programmatically
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    info!("Basic example with Pipeline");
 
     let app_cancel_token = CancellationToken::new();
 
@@ -78,30 +82,30 @@ async fn main() {
 
     tokio::spawn(async move {
         while let Ok(message) = flow1_channel.receive().await {
-            println!("Flow 1 RCV: {}", message.get_payload());
+            info!("Flow 1 RCV: {}", message.get_payload());
         }
-        println!("Flow 1 finished receiving.");
+        info!("Flow 1 finished receiving.");
     });
 
     tokio::spawn(async move {
         while let Ok(message) = flow2_channel.receive().await {
-            println!("Flow 2 RCV: {}", message.get_payload());
+            info!("Flow 2 RCV: {}", message.get_payload());
             sleep(Duration::from_millis(50)).await;
         }
-        println!("Flow 2 finished receiving.");
+        info!("Flow 2 finished receiving.");
     });
 
     match signal::ctrl_c().await {
         Ok(()) => {
-            println!("Ctrl+C received. Cancelling pipeline...");
+            info!("Ctrl+C received. Cancelling pipeline...");
             app_cancel_token.cancel();
         }
         Err(err) => {
-            eprintln!("Unable to listen for shutdown signal: {}", err);
+            error!("Unable to listen for shutdown signal: {}", err);
             app_cancel_token.cancel();
         }
     }
 
     sleep(Duration::from_secs(1)).await;
-    println!("Shutdown complete.");
+    info!("Shutdown complete.");
 }

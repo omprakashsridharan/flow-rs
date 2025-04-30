@@ -2,6 +2,7 @@ use crate::channel::Channel;
 use crate::config::FlowConfig;
 use tokio::sync::broadcast::channel;
 use tokio_util::sync::CancellationToken;
+use log::{debug, error};
 
 use crate::message::Message;
 
@@ -35,7 +36,7 @@ impl<T: Clone + Send + 'static + Sync> Flow<T> {
 
                 tokio::select! {
                     _ = cancellation_token.cancelled() => {
-                        println!("{}", format!("Flow {}: Cancellation received. Stopping receive loop.", flow_name));
+                        debug!("{}", format!("Flow {}: Cancellation received. Stopping receive loop.", flow_name));
                         break;
                     }
                     result = source_receiver.recv() => {
@@ -48,15 +49,15 @@ impl<T: Clone + Send + 'static + Sync> Flow<T> {
 
                                 if should_send {
                                     if let Err(e) = bc_sender.send(message.clone()) {
-                                eprintln!("Flow {}: Failed to send message to output channel: {}. No downstream receivers?", flow_name, e);
+                                        error!("Flow {}: Failed to send message to output channel: {}. No downstream receivers?", flow_name, e);
                                     }
                                 }
                             }
                             Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                                eprintln!("Flow {}: Lagged behind source by {} messages.", flow_name, n);
+                                debug!("Flow {}: Lagged behind source by {} messages.", flow_name, n);
                             }
                             Err(tokio::sync::broadcast::error::RecvError::Closed) => {
-                                println!("Flow {}: Source channel closed. Stopping receive loop.", flow_name);
+                                debug!("Flow {}: Source channel closed. Stopping receive loop.", flow_name);
                                 break;
                             }
                         }
@@ -64,7 +65,7 @@ impl<T: Clone + Send + 'static + Sync> Flow<T> {
                     }
                 }
             }
-            println!("Flow {}: Receive loop finished.", flow_name);
+            debug!("Flow {}: Receive loop finished.", flow_name);
         });
 
         Channel::new(broadcast_sender, internal_receiver)

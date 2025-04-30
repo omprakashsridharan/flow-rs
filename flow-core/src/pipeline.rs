@@ -1,10 +1,10 @@
 use crate::broadcast_source::BroadcastSource;
 use crate::channel::Channel;
 use crate::flow::Flow;
+use log::debug;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
-
 
 /// Manages the lifecycle of a BroadcastSource and multiple connected Flows.
 pub struct Pipeline<T: Clone + Send + Sync + 'static> {
@@ -36,13 +36,16 @@ impl<T: Clone + Send + Sync + 'static> Pipeline<T> {
     ///
     /// A `HashMap` where keys are the names of the flows and values are the
     /// corresponding `Channel` instances for their output.
-    pub async fn start(&self, cancellation_token: CancellationToken) -> HashMap<String, Channel<T>> {
+    pub async fn start(
+        &self,
+        cancellation_token: CancellationToken,
+    ) -> HashMap<String, Channel<T>> {
         // Start the source runner task
         let source_runner_token = cancellation_token.clone();
         let source_to_run = self.source.clone();
         tokio::spawn(async move {
             source_to_run.run(source_runner_token).await;
-            println!("Pipeline: Source runner task finished.");
+            debug!("Pipeline: Source runner task finished.");
         });
 
         // Start each flow and collect their output channels in a HashMap
