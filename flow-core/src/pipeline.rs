@@ -52,8 +52,10 @@ impl<T: Clone + Send + Sync + 'static> Pipeline<T> {
         let mut output_channels = HashMap::with_capacity(self.flows.len());
         for flow in &self.flows {
             let flow_cancel_token = cancellation_token.clone();
-            // Note: Flow::start itself spawns the flow's main loop task.
-            let output_channel = flow.start(flow_cancel_token).await;
+            // Subscribe to the source for this specific flow
+            let input_receiver = self.source.subscribe();
+            // Pass the receiver to the modified flow.start
+            let output_channel = flow.start(flow_cancel_token, input_receiver).await;
             // Use flow name as the key
             output_channels.insert(flow.get_name(), output_channel);
         }

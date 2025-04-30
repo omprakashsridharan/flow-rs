@@ -1,4 +1,5 @@
-use flow_core::broadcast_source::{BroadcastSource, PollingSourceWrapper};
+use env_logger::Env;
+use flow_core::broadcast_source::PollingSource;
 use flow_core::config::FlowConfigBuilder;
 use flow_core::filter::Filter;
 use flow_core::flow::Flow;
@@ -13,7 +14,6 @@ use std::time::Duration;
 use tokio::signal;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
-use env_logger::Env;
 
 struct MyMessageSource {
     pub name: String,
@@ -52,12 +52,11 @@ async fn main() {
 
     let source_trigger = Arc::new(IntervalTrigger::new(Duration::from_secs(1)));
 
-    let broadcast_source = Arc::new(PollingSourceWrapper::new(my_source, source_trigger, 100));
+    let broadcast_source = Arc::new(PollingSource::new(my_source, source_trigger, 100));
 
     let flow1_config = FlowConfigBuilder::default()
         .name("Flow 1".to_string())
         .messages_capacity(100)
-        .source(broadcast_source.clone() as Arc<dyn BroadcastSource<Payload = String>>)
         .filter(Some(Arc::new(HelloFilter {})))
         .build()
         .unwrap();
@@ -67,7 +66,6 @@ async fn main() {
     let flow2_config = FlowConfigBuilder::default()
         .name("Flow 2".to_string())
         .messages_capacity(100)
-        .source(broadcast_source.clone() as Arc<dyn BroadcastSource<Payload = String>>)
         .filter(None)
         .build()
         .unwrap();
@@ -77,8 +75,12 @@ async fn main() {
     let pipeline = Pipeline::new(broadcast_source, vec![flow1, flow2]);
 
     let mut output_channels = pipeline.start(app_cancel_token.clone()).await;
-    let mut flow1_channel = output_channels.remove("Flow 1").expect("Flow 1 channel not found");
-    let mut flow2_channel = output_channels.remove("Flow 2").expect("Flow 2 channel not found");
+    let mut flow1_channel = output_channels
+        .remove("Flow 1")
+        .expect("Flow 1 channel not found");
+    let mut flow2_channel = output_channels
+        .remove("Flow 2")
+        .expect("Flow 2 channel not found");
 
     tokio::spawn(async move {
         while let Ok(message) = flow1_channel.receive().await {

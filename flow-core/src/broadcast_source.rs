@@ -27,14 +27,14 @@ pub trait BroadcastSource: Send + Sync {
 ///
 /// It uses the trigger to poll the underlying `MessageSource` and broadcasts
 /// the received messages via a `tokio::sync::broadcast` channel.
-pub struct PollingSourceWrapper<S: MessageSource> {
+pub struct PollingSource<S: MessageSource> {
     source: Arc<S>,
     trigger: Arc<dyn Trigger>,
     sender: Sender<Message<S::Payload>>,
     // Receiver is not stored here, new ones are created via sender.subscribe()
 }
 
-impl<S> PollingSourceWrapper<S>
+impl<S> PollingSource<S>
 where
     S: MessageSource + 'static, // Ensure S can live for the 'static lifetime required by tokio::spawn
 {
@@ -57,7 +57,7 @@ where
 }
 
 #[async_trait]
-impl<S> BroadcastSource for PollingSourceWrapper<S>
+impl<S> BroadcastSource for PollingSource<S>
 where
     S: MessageSource + 'static, // 'static bound needed here too
 {

@@ -64,7 +64,7 @@ impl Filter<String> for HelloFilter {
 Configure and assemble the pipeline components.
 
 ```rust
-use flow_core::broadcast_source::{BroadcastSource, PollingSourceWrapper};
+use flow_core::broadcast_source::{BroadcastSource, PollingSource};
 use flow_core::config::FlowConfigBuilder;
 use flow_core::flow::Flow;
 use flow_core::pipeline::Pipeline;
@@ -72,10 +72,15 @@ use flow_core::trigger::IntervalTrigger;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
+use log::info;
+use tokio::signal;
 // ... include MyMessageSource and HelloFilter definitions ...
 
 #[tokio::main]
 async fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    info!("Basic example starting...");
+
     let app_cancel_token = CancellationToken::new();
 
     // 1. Create the underlying source
@@ -86,24 +91,22 @@ async fn main() {
     // 2. Create a trigger (e.g., poll every second)
     let source_trigger = Arc::new(IntervalTrigger::new(Duration::from_secs(1)));
 
-    // 3. Wrap the source and trigger in a BroadcastSource
-    let broadcast_source = Arc::new(PollingSourceWrapper::new(my_source, source_trigger, 100));
+    // 3. Wrap the source and trigger in a BroadcastSource (using PollingSource)
+    let broadcast_source = Arc::new(PollingSource::new(my_source, source_trigger, 100));
 
-    // 4. Configure Flow 1 (with filter)
+    // 4. Configure Flow 1 (with filter) - Source is no longer passed here
     let flow1_config = FlowConfigBuilder::default()
         .name("Flow 1".to_string())
         .messages_capacity(100)
-        .source(broadcast_source.clone() as Arc<dyn BroadcastSource<Payload = String>>)
         .filter(Some(Arc::new(HelloFilter {}))) // Apply the filter
         .build()
         .unwrap();
     let flow1: Flow<String> = Flow::new(flow1_config);
 
-    // 5. Configure Flow 2 (no filter)
+    // 5. Configure Flow 2 (no filter) - Source is no longer passed here
     let flow2_config = FlowConfigBuilder::default()
         .name("Flow 2".to_string())
         .messages_capacity(100)
-        .source(broadcast_source.clone() as Arc<dyn BroadcastSource<Payload = String>>)
         .filter(None) // No filter
         .build()
         .unwrap();
@@ -117,30 +120,30 @@ async fn main() {
     let mut flow1_channel = output_channels.remove("Flow 1").unwrap();
     let mut flow2_channel = output_channels.remove("Flow 2").unwrap();
 
-    // 8. Spawn tasks to consume messages from each flow's channel
+    // 8. Spawn tasks to consume messages from each flow's channel (using info!)
     tokio::spawn(async move {
         while let Ok(message) = flow1_channel.receive().await {
-            println!("Flow 1 RCV: {}", message.get_payload());
+            info!("Flow 1 RCV: {}", message.get_payload());
         }
-        println!("Flow 1 finished receiving.");
+        info!("Flow 1 finished receiving.");
     });
 
     tokio::spawn(async move {
         while let Ok(message) = flow2_channel.receive().await {
-            println!("Flow 2 RCV: {}", message.get_payload());
+            info!("Flow 2 RCV: {}", message.get_payload());
             // tokio::time::sleep(Duration::from_millis(50)).await; // Optional delay
         }
-        println!("Flow 2 finished receiving.");
+        info!("Flow 2 finished receiving.");
     });
 
-    // Keep the application running until Ctrl+C is pressed
-    tokio::signal::ctrl_c().await.expect("Failed to listen for ctrl-c");
-    println!("Ctrl+C received. Cancelling pipeline...");
+    // Keep the application running until Ctrl+C is pressed (updated signal handling)
+    signal::ctrl_c().await.expect("Failed to listen for ctrl-c");
+    info!("Ctrl+C received. Cancelling pipeline...");
     app_cancel_token.cancel();
 
     // Allow time for shutdown
     tokio::time::sleep(Duration::from_secs(1)).await;
-    println!("Shutdown complete.");
+    info!("Shutdown complete.");
 }
 ```
 
@@ -149,10 +152,11 @@ async fn main() {
 You can find this basic example in the `examples/basic` directory. To run it:
 
 ```bash
-cargo run --example basic
+# Make sure to enable info logs to see output
+RUST_LOG=info cargo run --example basic
 ```
 
-This will start the pipeline, and you'll see messages being printed from both flows, with Flow 1 only showing messages that start with "Hello". Press Ctrl+C to stop.
+This will start the pipeline, and you'll see messages being printed (via logger) from both flows, with Flow 1 only showing messages that start with "Hello". Press Ctrl+C to stop.
 
 ## Future Plans
 

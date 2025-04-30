@@ -1,6 +1,6 @@
 use crate::channel::Channel;
 use crate::config::FlowConfig;
-use tokio::sync::broadcast::channel;
+use tokio::sync::broadcast::{channel, Receiver};
 use tokio_util::sync::CancellationToken;
 use log::{debug, error};
 
@@ -19,12 +19,9 @@ impl<T: Clone + Send + 'static + Sync> Flow<T> {
         self.config.get_name()
     }
 
-    pub async fn start(&self, cancellation_token: CancellationToken) -> Channel<T> {
+    pub async fn start(&self, cancellation_token: CancellationToken, mut input_receiver: Receiver<Message<T>>) -> Channel<T> {
         let flow_name = self.config.get_name();
         let (broadcast_sender, internal_receiver) = channel::<Message<T>>(self.config.get_messages_capacity());
-
-        let source = self.config.get_source();
-        let mut source_receiver = source.subscribe();
 
         let broadcast_sender_clone = broadcast_sender.clone();
         let filter_opt = self.config.get_filter();
@@ -39,7 +36,7 @@ impl<T: Clone + Send + 'static + Sync> Flow<T> {
                         debug!("{}", format!("Flow {}: Cancellation received. Stopping receive loop.", flow_name));
                         break;
                     }
-                    result = source_receiver.recv() => {
+                    result = input_receiver.recv() => {
                         match result {
                             Ok(message) => {
                                 let should_send = match &filter_opt_clone {
@@ -61,7 +58,6 @@ impl<T: Clone + Send + 'static + Sync> Flow<T> {
                                 break;
                             }
                         }
-
                     }
                 }
             }
